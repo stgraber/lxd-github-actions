@@ -12,6 +12,8 @@ added as Github Runners. Each of those will process exactly one job and
 then self-destroy. This is to avoid running jobs in unclean
 environments, preventing one job from impacting or attacking the next.
 
+https://www.youtube.com/watch?v=c40BPKcSr4E
+
 # Creating a suitable base instance
 Either containers or VMs can be use for this.
 
@@ -65,10 +67,28 @@ Lastly, you need a set of instances to start and register with Github:
 This will start an initial set of 10 instances.
 
 # What's next
-Currently, the instances will just go away once they're done processing a job, so you'll have to keep adding more with `./spawn`.
+Currently, the instances will just go away once they're done processing
+a job, so you'll have to keep adding more with `./spawn`.
 This isn't ideal but can be scripted around easily enough.
 
-In the future, it'd be better to have a more complex script or program
-which keeps track of instances, can check how many are ready, how many
-are in use and re-plenish the pool so that there always are a couple of
-instances ready up to a maximum that the system can handle.
+There's also the issue of the TOKEN being somewhat short lived, so
+eventually, you'll have to run `./prepare` again with a new token.
+
+To address that, it'd be great to:
+ - Write a daemon process that manages all this
+ - Have the daemon ensure a pool of available instances up to a maximum
+ - Move the registration logic to the daemon, have it use the Github API
+   to generate one-time tokens and pass those into the instance
+ - Have the daemon enforce maximum job run time and cleanup any instance
+   that exceeds it or that's otherwise broken in some way
+
+Other future improvements could include:
+ - Automatic update/re-generation of the base instances
+ - Ability to pull in standard Github Actions images
+
+This initial work was really all done in a few hours to see how easy it
+is to run some self-hosted Github Actions runners now that the Actions
+API properly support ephemeral test runners (was blocked on
+https://github.com/actions/runner/issues/510 for a long time).
+
+Anyone interested is very much encouraged to get in touch and contribute!
