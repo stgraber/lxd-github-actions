@@ -1,0 +1,44 @@
+#!/bin/sh
+(
+cat << EOF
+#!/bin/sh
+set -eu
+
+apt-get install curl git --yes
+ARCH=x64
+[ "\$(uname -m)" = "aarch64" ] && ARCH=arm64
+curl -o /tmp/runner.tar.gz -L https://github.com/actions/runner/releases/download/v2.283.1/actions-runner-linux-\${ARCH}-2.283.1.tar.gz
+
+# Create directory for the runner
+mkdir /srv/github-actions/
+cd /srv/github-actions/
+chown ubuntu:ubuntu /srv/github-actions/
+
+# Unpack the code
+sudo -u ubuntu -i tar zxf /tmp/runner.tar.gz -C /srv/github-actions/
+
+# Setup the systemd unit
+(
+cat << EOG
+[Unit]
+Description=github - Actions runner
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/github-actions/
+ExecStartPre=/usr/bin/sudo -u ubuntu -i /srv/github-actions/config.sh --url ${2} --token ${3} --unattended --ephemeral --labels=${4}
+ExecStart=-/usr/bin/sudo -u ubuntu -i /srv/github-actions/run.sh
+ExecStartPost=/usr/sbin/poweroff
+
+[Install]
+WantedBy=multi-user.target
+EOG
+) > /etc/systemd/system/github-actions.service
+systemctl enable github-actions
+
+# Cleanup
+rm /tmp/runner.tar.gz
+EOF
+) | lxc exec $1 /bin/sh
